@@ -106,6 +106,17 @@ mainLoop:
                 if bd.IsEnd() {
                     fmt.Println("Winner: ", bd.GetWinner())
                 }
+            case "t", "time":
+                if len(tokens) != 2 {
+                    fmt.Println("usage: t(time) search_time[ms]")
+                    break
+                }
+                timeInMs, err := strconv.Atoi(tokens[1])
+                if err != nil {
+                    fmt.Println(err)
+                    break
+                }
+                pl.Time(int64(timeInMs))
             default:
                 fmt.Println("Invalid command")
         }
