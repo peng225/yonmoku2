@@ -7,6 +7,7 @@ import(
     "errors"
     "time"
     "fmt"
+    "sort"
 )
 
 type McPlayer struct {
@@ -25,17 +26,22 @@ type node struct {
     win int
 }
 
+
 func (mcp *McPlayer) selectBestChild(nd *node) int {
-    maxParentWinRate := -1.0
-    selectedPos := -1
+    // Sort the child nodes according to the parent's win rate.
+    compareChildren := func(i, j int) bool {
+        iParentWinRate := float64(nd.children[i].times - nd.children[i].win) / float64(nd.children[i].times)
+        jParentWinRate := float64(nd.children[j].times - nd.children[j].win) / float64(nd.children[j].times)
+        return iParentWinRate > jParentWinRate
+    }
+    sort.Slice(nd.children, compareChildren)
+
     for _, child := range nd.children {
         parentWinRate := float64(child.times - child.win) / float64(child.times)
         fmt.Printf("pos, winRate = %v, %v\n", child.pos, parentWinRate)
-        if maxParentWinRate < parentWinRate {
-            selectedPos = child.pos
-            maxParentWinRate = parentWinRate
-        }
     }
+
+    selectedPos := nd.children[0].pos
     fmt.Println("selected pos = ", selectedPos)
     return selectedPos
 }
