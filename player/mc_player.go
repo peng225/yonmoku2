@@ -8,6 +8,8 @@ import(
     "time"
     "fmt"
     "sort"
+    "sync"
+    "sync/atomic"
 )
 
 type McPlayer struct {
@@ -22,8 +24,9 @@ const(
 type node struct {
     children []node
     pos int
-    times int
-    win int
+    times int32
+    win int32
+    mu sync.Mutex
 }
 
 
@@ -46,7 +49,7 @@ func (mcp *McPlayer) selectBestChild(nd *node) int {
     return selectedPos
 }
 
-func (mcp *McPlayer) getUcbScore(totalTimes int, node *node) float64 {
+func (mcp *McPlayer) getUcbScore(totalTimes int32, node *node) float64 {
     parentWin := node.times - node.win
     return float64(parentWin)/(float64(node.times)+EPSILON) +
             C * math.Sqrt(math.Log2(float64(totalTimes))/(float64(node.times)+EPSILON))
@@ -69,7 +72,10 @@ func (mcp *McPlayer) getChildList(nd *node, bd *board.Board) []node {
     children := make([]node, 0)
     for i := 0; i < (*bd).Size(); i++ {
         if (*bd).CanPut(i) {
-            child := node{make([]node, 0), i, 0, 0}
+            child := node{children: make([]node, 0),
+                          pos: i,
+                          times: 0,
+                          win: 0}
             children = append(children, child)
         }
     }
@@ -101,12 +107,13 @@ func (mcp *McPlayer) playout(nd *node, bd *board.Board) string {
 }
 
 func (mcp *McPlayer) searchHelper(nd *node, bd *board.Board) string {
-    nd.times++
+    atomic.AddInt32(&nd.times, 1)
     var winner string
     if (*bd).IsEnd() {
         winner = (*bd).GetWinner()
     } else {
         // If this is the first time to visit the node "bd", get child list.
+        nd.mu.Lock()
         if len(nd.children) == 0 {
             children := mcp.getChildList(nd, bd)
             if len(children) == 0 {
@@ -114,6 +121,7 @@ func (mcp *McPlayer) searchHelper(nd *node, bd *board.Board) string {
             }
             nd.children = children
         }
+        nd.mu.Unlock()
 
         // Move to the selected child node.
         child := mcp.selectChild(nd)
@@ -131,7 +139,7 @@ func (mcp *McPlayer) searchHelper(nd *node, bd *board.Board) string {
     }
 
     if winner == (*bd).GetTurn() {
-        nd.win++
+        atomic.AddInt32(&nd.win, 1)
     }
     return winner
 }
@@ -141,11 +149,25 @@ func (mcp *McPlayer) Search(bd *board.Board) int {
     var root node
     root.pos = -1
     startTime := time.Now()
-    for time.Since(startTime).Milliseconds() < mcp.timeInMs {
-        mcp.searchHelper(&root, bd)
+    const UNIT_SEARCH_TIMES = 500
+    wg := &sync.WaitGroup{}
+    for time.Since(startTime).Milliseconds() < mcp.timeInMs*98/100 {
+        wg.Add(1)
+        go func() {
+            tmpBd := (*bd).Copy()
+            for i := 0;
+                i < UNIT_SEARCH_TIMES &&
+                    time.Since(startTime).Milliseconds() < mcp.timeInMs*98/100;
+                i++ {
+                mcp.searchHelper(&root, &tmpBd)
+            }
+            wg.Done()
+        }()
     }
+    wg.Wait()
     selectedPos := mcp.selectBestChild(&root)
     fmt.Println("the number of searches: ", root.times)
+    fmt.Println("elapsed time[ms]: ", time.Since(startTime).Milliseconds())
     return selectedPos
 }
 

@@ -10,5 +10,6 @@ type Board interface {
     IsEnd() bool
     GetWinner() string
     GetTurn() string
+    Copy() Board
 }
 

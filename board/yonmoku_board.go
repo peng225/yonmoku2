@@ -295,3 +295,13 @@ func (yb *YonmokuBoard) GetTurn() string {
     }
 }
 
+
+func (yb *YonmokuBoard) Copy() Board {
+    var copiedYb YonmokuBoard = *yb
+    copiedYb.board = make([]STATE, len(yb.board))
+    copiedYb.history = make([]int, len(yb.history))
+    copy(copiedYb.board, yb.board)
+    copy(copiedYb.history, yb.history)
+    return &copiedYb
+}
+
