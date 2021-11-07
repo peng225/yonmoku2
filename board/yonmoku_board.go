@@ -123,7 +123,7 @@ func (yb *YonmokuBoard) printTurn() {
 
 
 func (yb *YonmokuBoard) IsEnd() bool {
-    if yb.GetWinner() != "EMPTY" {
+    if yb.getWinner() != EMPTY {
         return true
     }
 
