@@ -168,7 +168,126 @@ func (yb *YonmokuBoard) GetWinner() string {
     return stateToString(yb.getWinner())
 }
 
+func (yb *YonmokuBoard) getState(row, col int) STATE {
+    if row < 0 || yb.size <= row ||
+        col < 0 || yb.size <= col {
+        panic("Invalid row and col.")
+    }
+    return yb.board[row*yb.size + col]
+}
+
+func maxInt(x, y int) int {
+    if y < x {
+        return x
+    } else {
+        return y
+    }
+}
+
+func minInt(x, y int) int {
+    if x < y {
+        return x
+    } else {
+        return y
+    }
+}
+
 func (yb *YonmokuBoard) getWinner() STATE {
+    if len(yb.history) < 7 {
+        return EMPTY
+    }
+    lastPos := yb.history[len(yb.history)-1]
+    var lastRow int
+
+    // Get the row of the last put
+    for row := 0; row < yb.size; row++ {
+        if yb.getState(row, lastPos) != EMPTY {
+            lastRow = row
+            break
+        }
+    }
+
+    // Check horizontal line
+    count := 0
+    var prevState STATE = EMPTY
+    for col := maxInt(0, lastPos-3); col < minInt(yb.size, lastPos+4); col++ {
+        currentState := yb.getState(lastRow, col)
+        if currentState == EMPTY {
+            count = 0
+        } else if prevState == EMPTY || currentState == prevState {
+            count++
+        } else {
+            count = 1
+        }
+        if count == 4 {
+            return currentState
+        }
+        prevState = currentState
+    }
+
+    // Check vertical line
+    count = 0
+    prevState = EMPTY
+    for row := maxInt(0, lastRow-3); row < minInt(yb.size, lastRow+4); row++ {
+        currentState := yb.getState(row, lastPos)
+        if currentState == EMPTY {
+            count = 0
+        } else if prevState == EMPTY || currentState == prevState {
+            count++
+        } else {
+            count = 1
+        }
+        if count == 4 {
+            return currentState
+        }
+        prevState = currentState
+    }
+
+    // Check top-left to bottom-right line
+    startDiff := -minInt(3, minInt(lastRow, lastPos))
+    endDiff := minInt(4, minInt(yb.size-lastRow, yb.size-lastPos))
+    count = 0
+    prevState = EMPTY
+    for diff := startDiff; diff < endDiff; diff++ {
+        currentState := yb.getState(lastRow+diff, lastPos+diff)
+        if currentState == EMPTY {
+            count = 0
+        } else if prevState == EMPTY || currentState == prevState {
+            count++
+        } else {
+            count = 1
+        }
+        if count == 4 {
+            return currentState
+        }
+        prevState = currentState
+    }
+
+    // Check top-right to bottom-left line
+    startDiff = -minInt(3, minInt(lastRow, yb.size-lastPos-1))
+    endDiff = minInt(4, minInt(yb.size-lastRow, lastPos+1))
+    count = 0
+    prevState = EMPTY
+    for diff := startDiff; diff < endDiff; diff++ {
+        currentState := yb.getState(lastRow+diff, lastPos-diff)
+        if currentState == EMPTY {
+            count = 0
+        } else if prevState == EMPTY || currentState == prevState {
+            count++
+        } else {
+            count = 1
+        }
+        if count == 4 {
+            return currentState
+        }
+        prevState = currentState
+    }
+
+    return EMPTY
+
+}
+
+func (yb *YonmokuBoard) getWinnerFullCheck() STATE {
     // Check horizontal line
     for row := 0; row < yb.size; row++ {
         count := 0
