@@ -25,6 +25,10 @@ func (yb *YonmokuBoard) Size() int {
 }
 
 func (yb *YonmokuBoard) Init(size int) {
+    if size < 4 {
+        fmt.Println("Size is too small.")
+        return
+    }
     yb.size = size
     yb.turn = RED
     yb.board = make([]STATE, yb.size*yb.size)
