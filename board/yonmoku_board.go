@@ -49,8 +49,8 @@ func (yb *YonmokuBoard) Put(pos int) error {
 
     isPut := false
     for i := yb.size-1; i >= 0; i-- {
-        if yb.board[i*yb.size + pos] == EMPTY {
-            yb.board[i*yb.size + pos] = yb.turn
+        if yb.getState(i, pos) == EMPTY {
+            yb.setState(i, pos, yb.turn)
             isPut = true
             break
         }
@@ -70,8 +70,8 @@ func (yb *YonmokuBoard) Reverse() {
     pos := yb.history[len(yb.history)-1]
     yb.history = yb.history[:len(yb.history)-1]
     for i := 0; i < yb.size; i++ {
-        if yb.board[i*yb.size + pos] != EMPTY {
-            yb.board[i*yb.size + pos] = EMPTY
+        if yb.getState(i, pos) != EMPTY {
+            yb.setState(i, pos, EMPTY)
             yb.changeTurn()
             break
         }
@@ -86,7 +86,7 @@ func (yb *YonmokuBoard) Display() {
     for i:= 0; i < yb.size; i++ {
         fmt.Print("|")
         for j:= 0; j < yb.size; j++ {
-            switch(yb.board[yb.size*i + j]) {
+            switch(yb.getState(i, j)) {
                 case EMPTY:
                     fmt.Print(" ")
                 case RED:
@@ -175,6 +175,15 @@ func (yb *YonmokuBoard) getState(row, col int) STATE {
     }
     return yb.board[row*yb.size + col]
 }
+
+func (yb *YonmokuBoard) setState(row, col int, st STATE) {
+    if row < 0 || yb.size <= row ||
+        col < 0 || yb.size <= col {
+        panic("Invalid row and col.")
+    }
+    yb.board[row*yb.size + col] = st
+}
+
 
 func maxInt(x, y int) int {
     if y < x {
@@ -293,7 +302,7 @@ func (yb *YonmokuBoard) getWinnerFullCheck() STATE {
         count := 0
         var prevState STATE = EMPTY
         for col := 0; col < yb.size; col++ {
-            currentState := yb.board[row*yb.size + col]
+            currentState := yb.getState(row, col)
             if currentState == EMPTY {
                 count = 0
             } else if prevState == EMPTY || currentState == prevState {
@@ -313,7 +322,7 @@ func (yb *YonmokuBoard) getWinnerFullCheck() STATE {
         count := 0
         var prevState STATE = EMPTY
         for row := 0; row < yb.size; row++ {
-            currentState := yb.board[row*yb.size + col]
+            currentState := yb.getState(row, col)
             if currentState == EMPTY {
                 count = 0
             } else if prevState == EMPTY || currentState == prevState {
@@ -333,7 +342,7 @@ func (yb *YonmokuBoard) getWinnerFullCheck() STATE {
         count := 0
         var prevState STATE = EMPTY
         for r, c := row, 0; r < yb.size && c < yb.size; r, c = r+1, c+1 {
-            currentState := yb.board[r*yb.size + c]
+            currentState := yb.getState(r, c)
             if currentState == EMPTY {
                 count = 0
             } else if prevState == EMPTY || currentState == prevState {
@@ -351,7 +360,7 @@ func (yb *YonmokuBoard) getWinnerFullCheck() STATE {
         count := 0
         var prevState STATE = EMPTY
         for r, c := 0, col; r < yb.size && c < yb.size; r, c = r+1, c+1 {
-            currentState := yb.board[r*yb.size + c]
+            currentState := yb.getState(r, c)
             if currentState == EMPTY {
                 count = 0
             } else if prevState == EMPTY || currentState == prevState {
@@ -371,7 +380,7 @@ func (yb *YonmokuBoard) getWinnerFullCheck() STATE {
         count := 0
         var prevState STATE = EMPTY
         for r, c := row, yb.size-1; r < yb.size && 0 <= c; r, c = r+1, c-1 {
-            currentState := yb.board[r*yb.size + c]
+            currentState := yb.getState(r, c)
             if currentState == EMPTY {
                 count = 0
             } else if prevState == EMPTY || currentState == prevState {
@@ -389,7 +398,7 @@ func (yb *YonmokuBoard) getWinnerFullCheck() STATE {
         count := 0
         var prevState STATE = EMPTY
         for r, c := 0, col; r < yb.size && c < yb.size; r, c = r+1, c-1 {
-            currentState := yb.board[r*yb.size + c]
+            currentState := yb.getState(r, c)
             if currentState == EMPTY {
                 count = 0
             } else if prevState == EMPTY || currentState == prevState {
