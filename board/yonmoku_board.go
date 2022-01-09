@@ -16,7 +16,8 @@ const (
 type YonmokuBoard struct {
     size int
     turn STATE
-    board []STATE
+    redBoard []uint64
+    yellowBoard []uint64
     history []int
 }
 
@@ -31,19 +32,29 @@ func (yb *YonmokuBoard) Init(size int) {
     }
     yb.size = size
     yb.turn = RED
-    yb.board = make([]STATE, yb.size*yb.size)
+    blockSize := (yb.size+7)/8
+    blockSize *= blockSize
+    yb.redBoard = make([]uint64, blockSize)
+    yb.yellowBoard = make([]uint64, blockSize)
     yb.history = make([]int, 0)
 
-    for i := range yb.board {
-        yb.board[i] = EMPTY
+    for i := range yb.redBoard {
+        yb.redBoard[i] = 0
     }
+    for i := range yb.yellowBoard {
+        yb.yellowBoard[i] = 0
+    }
+}
+
+func (yb *YonmokuBoard) isColumnFull(pos int) bool {
+    return yb.getState(0, pos) != EMPTY
 }
 
 func (yb *YonmokuBoard) Put(pos int) error {
     if pos < 0 || yb.size <= pos {
         return errors.New("The pos is out of range.")
     }
-    if yb.board[pos] != EMPTY {
+    if yb.isColumnFull(pos) {
         return errors.New("The pos is already full.")
     }
 
@@ -132,7 +143,7 @@ func (yb *YonmokuBoard) IsEnd() bool {
     }
 
     for i := 0; i < yb.size; i++ {
-        if yb.board[i] == EMPTY {
+        if !yb.isColumnFull(i) {
             return false
         }
     }
@@ -158,7 +169,7 @@ func (yb *YonmokuBoard) CanPut(pos int) bool {
     if pos < 0 || yb.size <= pos {
         return false
     }
-    if yb.board[pos] != EMPTY {
+    if yb.isColumnFull(pos) {
         return false
     }
     return true
@@ -173,7 +184,16 @@ func (yb *YonmokuBoard) getState(row, col int) STATE {
         col < 0 || yb.size <= col {
         panic("Invalid row and col.")
     }
-    return yb.board[row*yb.size + col]
+    blockIndex := ((yb.size+7)/8) * row/8 + col/8
+    var allf uint64 = 0x8000000000000000
+    targetBit := allf >> (8*(row%8)+(col%8))
+    if((yb.redBoard[blockIndex] & targetBit) != 0) {
+        return RED
+    }
+    if((yb.yellowBoard[blockIndex] & targetBit) != 0) {
+        return YELLOW
+    }
+    return EMPTY
 }
 
 func (yb *YonmokuBoard) setState(row, col int, st STATE) {
@@ -181,9 +201,23 @@ func (yb *YonmokuBoard) setState(row, col int, st STATE) {
         col < 0 || yb.size <= col {
         panic("Invalid row and col.")
     }
-    yb.board[row*yb.size + col] = st
+    blockIndex := ((yb.size+7)/8) * row/8 + col/8
+    var allf uint64 = 0x8000000000000000
+    targetBit := allf >> (8*(row%8)+(col%8))
+    switch(st) {
+        case RED:
+            yb.redBoard[blockIndex] |= targetBit
+            yb.yellowBoard[blockIndex] &= ^targetBit
+        case YELLOW:
+            yb.yellowBoard[blockIndex] |= targetBit
+            yb.redBoard[blockIndex] &= ^targetBit
+        case EMPTY:
+            yb.redBoard[blockIndex] &= ^targetBit
+            yb.yellowBoard[blockIndex] &= ^targetBit
+        default:
+            panic("Invalid state was given")
+    }
 }
-
 
 func maxInt(x, y int) int {
     if y < x {
@@ -430,9 +464,11 @@ func (yb *YonmokuBoard) GetTurn() string {
 
 func (yb *YonmokuBoard) Copy() Board {
     var copiedYb YonmokuBoard = *yb
-    copiedYb.board = make([]STATE, len(yb.board))
+    copiedYb.redBoard = make([]uint64, len(yb.redBoard))
+    copiedYb.yellowBoard = make([]uint64, len(yb.yellowBoard))
     copiedYb.history = make([]int, len(yb.history))
-    copy(copiedYb.board, yb.board)
+    copy(copiedYb.redBoard, yb.redBoard)
+    copy(copiedYb.yellowBoard, yb.yellowBoard)
     copy(copiedYb.history, yb.history)
     return &copiedYb
 }
