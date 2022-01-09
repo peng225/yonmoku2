@@ -5,7 +5,7 @@ import(
     "errors"
 )
 
-type STATE int
+type STATE int8
 
 const (
     EMPTY = iota
